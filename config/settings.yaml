@@ -1,0 +1,35 @@
+# PandaAI 配置
+pandaai:
+  api_key: "${PANDAAI_API_KEY:-}"
+  endpoint: "https://api.pandaai.com"
+  model: "panda-ai-v2"
+  timeout: 30
+  max_retries: 3
+
+# CrewAI 配置
+crewai:
+  model: "gpt-4"
+  verbose: true
+  max_iter: 10
+  temperature: 0.7
+
+# 数据处理配置
+data:
+  max_rows: 100000
+  max_columns: 100
+  sample_size: 1000
+  chunk_size: 10000
+
+# 分析配置
+analysis:
+  default_confidence: 0.8
+  trend_window: 7  # 天
+  anomaly_threshold: 2  # 标准差
+
+# 报告配置
+report:
+  output_dir: "outputs"
+  include_charts: true
+  chart_format: "png"
+  chart_width: 1200
+  chart_height: 600
