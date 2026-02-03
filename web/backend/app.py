@@ -17,8 +17,9 @@ from datetime import datetime
 import asyncio
 import pandas as pd
 
-# 添加 src 到路径
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# 添加项目根目录到路径（web/backend -> 项目根目录）
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
 
 from src.crew_v2 import create_crew
 from dotenv import load_dotenv
