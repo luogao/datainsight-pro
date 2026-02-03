@@ -20,7 +20,7 @@ import pandas as pd
 # 添加 src 到路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.crew import DataAnalysisCrew
+from src.crew_v2 import create_crew
 from dotenv import load_dotenv
 
 # 加载环境变量
@@ -88,8 +88,8 @@ async def run_analysis_task(task_id: str, goal: str, dataset_path: str, depth: s
     try:
         update_task_status(task_id, "running", 10, "初始化分析...")
 
-        # 初始化 Crew
-        crew = DataAnalysisCrew()
+        # 初始化 Crew（使用 v2 版本）
+        crew = create_crew(dataset_path, goal, depth)
         update_task_status(task_id, "running", 20, "启动 Agent 团队...")
 
         # 执行分析
@@ -97,15 +97,7 @@ async def run_analysis_task(task_id: str, goal: str, dataset_path: str, depth: s
 
         output_path = OUTPUT_DIR / f"{task_id}_report.{output_format}" if output_format == 'json' else OUTPUT_DIR / f"{task_id}_report.md"
 
-        result = crew.kickoff(
-            inputs={
-                'goal': goal,
-                'dataset_path': dataset_path,
-                'analysis_depth': depth,
-                'output_path': str(output_path),
-                'output_format': output_format
-            }
-        )
+        result = crew.kickoff()
 
         update_task_status(task_id, "running", 90, "生成报告...")
 

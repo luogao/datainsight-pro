@@ -27,26 +27,115 @@
 - **Lucide React** - 图标库
 - **React Markdown** - Markdown 渲染
 
-## 📦 安装与运行
+## 🚀 快速开始
 
-### 前置要求
+### 方式一：一键启动（推荐）
 
-- Python 3.10+
-- Node.js 18+
-- npm 或 yarn
-
-### 后端安装
+从项目根目录运行：
 
 ```bash
-# 1. 进入后端目录
+bash start_web.sh
+```
+
+这将自动启动后端和前端服务。
+
+### 方式二：手动启动
+
+#### 1. 配置环境变量
+
+在项目根目录：
+
+```bash
+cp .env.example .env
+```
+
+编辑 `.env` 文件，填入你的 API Keys：
+
+```bash
+OPENAI_API_KEY=your_api_key_here
+OPENAI_BASE_URL=https://open.bigmodel.cn/api/paas/v4  # 智谱 AI
+OPENAI_MODEL=glm-4.7
+```
+
+#### 2. 启动后端
+
+```bash
 cd web/backend
+python3 app.py
+```
 
-# 2. 创建虚拟环境（推荐）
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+后端将运行在：**http://localhost:8000**
 
-# 3. 安装依赖
-pip install fastapi uvicorn python-multipart pandas
+#### 3. 启动前端（新终端）
+
+```bash
+cd web/frontend
+npm install  # 首次运行需要
+npm run dev
+```
+
+前端将运行在：**http://localhost:3000**
+
+---
+
+## 📖 使用指南
+
+### 1. 打开 Web UI
+
+访问：http://localhost:3000
+
+### 2. 上传数据
+
+- 拖拽文件到上传区域
+- 或点击选择文件
+
+支持的格式：
+- CSV
+- JSON
+- Excel (.xlsx, .xls)
+
+### 3. 配置分析
+
+- **分析目标**：用自然语言描述你想了解什么
+  - 例如："分析销售趋势，找出最佳销售策略"
+- **分析深度**：选择分析深度
+  - 快速 - 5-10 分钟
+  - 标准 - 10-15 分钟
+  - 深入 - 15-20 分钟
+- **输出格式**：选择报告格式
+  - Markdown（推荐）
+  - JSON
+
+### 4. 查看报告
+
+- 实时查看分析进度
+- 分析完成后自动显示报告
+- 可切换预览模式和源码模式
+- 点击"下载报告"保存到本地
+
+---
+
+## 📊 API 文档
+
+访问 http://localhost:8000/docs 查看：
+- 完整的 API 文档
+- 交互式 API 测试工具
+- 请求/响应示例
+
+### 主要 API 端点
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/upload` | POST | 上传数据文件 |
+| `/analyze` | POST | 启动分析任务 |
+| `/tasks/{task_id}` | GET | 获取任务状态 |
+| `/reports/{task_id}` | GET | 获取分析报告 |
+| `/reports/{task_id}/download` | GET | 下载报告文件 |
+| `/sample-data` | GET | 获取示例数据列表 |
+
+---
+
+## 🔧 技术栈
 
 # 4. 安装项目依赖
 cd ../..
