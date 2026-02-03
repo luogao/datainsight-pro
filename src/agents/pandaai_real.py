@@ -47,18 +47,18 @@ class RealPandaAI:
         if not self.api_key:
             raise ValueError("需要设置 OPENAI_API_KEY 环境变量")
 
-        # 配置 LLM (pandasai 2.x 使用配置字典)
-        self.llm_config = {
-            "api_key": self.api_key,
-            "model": self.model,
-        }
-
-        # 如果有自定义 base_url，添加到配置中
+        # 配置环境变量（pandasai 使用）
+        os.environ["OPENAI_API_KEY"] = self.api_key
         if self.base_url and self.base_url != "https://api.openai.com/v1":
-            # pandasai 2.x 可能需要通过不同的方式配置
-            # 这里我们使用环境变量或者直接传递参数
             os.environ["OPENAI_API_BASE"] = self.base_url
-            os.environ["OPENAI_API_KEY"] = self.api_key
+
+        # 尝试创建 PandaAI LLM 实例
+        try:
+            from pandasai.llm import OpenAI
+            self.llm = OpenAI(api_key=self.api_key, model=self.model)
+        except Exception:
+            # 如果创建失败，使用环境变量方式
+            self.llm = None
 
     def chat(self, df: pd.DataFrame, question: str) -> str:
         """
@@ -73,7 +73,11 @@ class RealPandaAI:
         """
         try:
             # 使用 SmartDataframe (pandasai 2.x)
-            sdf = SmartDataframe(df, config={"llm": self.llm_config})
+            if self.llm:
+                sdf = SmartDataframe(df, config={"llm": self.llm})
+            else:
+                # 使用环境变量
+                sdf = SmartDataframe(df)
             result = sdf.chat(question)
             return str(result)
         except Exception as e:
@@ -102,7 +106,7 @@ class RealPandaAI:
 
         try:
             # 使用 SmartDataframe 生成图表
-            sdf = SmartDataframe(df, config={"llm": self.llm_config})
+            sdf = SmartDataframe(df)
             result = sdf.chat(prompt)
             return {
                 "type": chart_type,
@@ -134,7 +138,7 @@ class RealPandaAI:
 
             # 使用 PandaAI 清洗数据
             prompt = "请清洗这个数据集：处理缺失值、去除重复值、纠正异常值"
-            sdf = SmartDataframe(df, config={"llm": self.llm_config})
+            sdf = SmartDataframe(df)
             result = sdf.chat(prompt)
 
             # 如果返回的是 DataFrame
@@ -176,7 +180,7 @@ class RealPandaAI:
 
         try:
             # 创建 SmartDataframe
-            sdf = SmartDataframe(df, config={"llm": self.llm_config})
+            sdf = SmartDataframe(df)
 
             # 1. 数据概览洞察
             prompt = "分析这个数据集的整体特征，包括：数据分布、异常值、相关性"
@@ -217,7 +221,7 @@ class RealPandaAI:
         """
         try:
             prompt = f"基于这个数据集的历史数据，预测未来 {periods} 个周期的趋势，包括预测值和置信区间"
-            sdf = SmartDataframe(df, config={"llm": self.llm_config})
+            sdf = SmartDataframe(df)
             result = sdf.chat(prompt)
 
             return {
@@ -244,7 +248,7 @@ class RealPandaAI:
         """
         try:
             prompt = "请生成这个数据集的详细摘要，包括：统计特征、数据类型、质量评估"
-            sdf = SmartDataframe(df, config={"llm": self.llm_config})
+            sdf = SmartDataframe(df)
             result = sdf.chat(prompt)
 
             return {
