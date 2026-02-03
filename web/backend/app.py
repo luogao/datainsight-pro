@@ -90,7 +90,7 @@ async def run_analysis_task(task_id: str, goal: str, dataset_path: str, depth: s
         update_task_status(task_id, "running", 10, "初始化分析...")
 
         # 初始化 Crew（使用 v2 版本）
-        crew = create_crew(dataset_path, goal, depth)
+        crew = create_crew()
         update_task_status(task_id, "running", 20, "启动 Agent 团队...")
 
         # 执行分析
@@ -98,7 +98,14 @@ async def run_analysis_task(task_id: str, goal: str, dataset_path: str, depth: s
 
         output_path = OUTPUT_DIR / f"{task_id}_report.{output_format}" if output_format == 'json' else OUTPUT_DIR / f"{task_id}_report.md"
 
-        result = crew.kickoff()
+        # 使用 inputs 字典传递参数
+        result = crew.kickoff(inputs={
+            'dataset_path': dataset_path,
+            'goal': goal,
+            'depth': depth,
+            'output_path': str(output_path),
+            'output_format': output_format
+        })
 
         update_task_status(task_id, "running", 90, "生成报告...")
 
