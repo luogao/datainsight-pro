@@ -11,19 +11,19 @@ from src.crew_config import create_llm
 
 
 @tool
-def calculate_basic_stats(data_dict: dict, column: str) -> dict:
+def calculate_basic_stats(file_path: str, column: str) -> dict:
     """
     计算基本统计量：均值、中位数、标准差、最小值、最大值
 
     Args:
-        data_dict: 包含数据的字典
+        file_path: CSV 文件路径
         column: 要分析的列名
 
     Returns:
         统计结果字典
     """
     try:
-        df = pd.DataFrame(data_dict.get('data', []))
+        df = pd.read_csv(file_path)
 
         if column not in df.columns:
             return {"error": f"列 '{column}' 不存在"}
@@ -51,7 +51,7 @@ def analyze_trend(data_dict: dict, column: str, date_column: str = None) -> dict
     分析时间序列趋势
 
     Args:
-        data_dict: 数据字典
+        file_path: CSV 文件路径
         column: 数值列名
         date_column: 日期列名（可选）
 
@@ -59,7 +59,7 @@ def analyze_trend(data_dict: dict, column: str, date_column: str = None) -> dict
         趋势分析结果
     """
     try:
-        df = pd.DataFrame(data_dict.get('data', []))
+        df = pd.read_csv(file_path)
 
         if column not in df.columns:
             return {"error": f"列 '{column}' 不存在"}
@@ -102,14 +102,14 @@ def calculate_correlation(data_dict: dict, columns: list) -> dict:
     计算列之间的相关性
 
     Args:
-        data_dict: 数据字典
+        file_path: CSV 文件路径
         columns: 列名列表
 
     Returns:
         相关性矩阵
     """
     try:
-        df = pd.DataFrame(data_dict.get('data', []))
+        df = pd.read_csv(file_path)
 
         # 筛选数值列
         numeric_cols = df[columns].select_dtypes(include=[np.number]).columns.tolist()
@@ -149,7 +149,7 @@ def detect_anomalies(data_dict: dict, column: str, threshold: float = 2.0) -> li
     检测异常值（使用标准差法）
 
     Args:
-        data_dict: 数据字典
+        file_path: CSV 文件路径
         column: 列名
         threshold: 标准差倍数
 
@@ -157,7 +157,7 @@ def detect_anomalies(data_dict: dict, column: str, threshold: float = 2.0) -> li
         异常值列表
     """
     try:
-        df = pd.DataFrame(data_dict.get('data', []))
+        df = pd.read_csv(file_path)
 
         if column not in df.columns:
             return [{"error": f"列 '{column}' 不存在"}]
