@@ -89,23 +89,152 @@ async def run_analysis_task(task_id: str, goal: str, dataset_path: str, depth: s
     try:
         update_task_status(task_id, "running", 10, "初始化分析...")
 
-        # 初始化 Crew（使用 v2 版本）
-        crew = create_crew()
-        update_task_status(task_id, "running", 20, "启动 Agent 团队...")
+        # 直接使用 src/agents 中的工具和 Agent，不使用 create_crew
+        # 这样可以完全控制数据流
+        from src.agents.data_explorer_v2 import data_explorer
+        from src.agents.analyst_v2 import analyst
+        from src.agents.pandaai_real import pandaai_agent
+        from src.agents.reporter_v2 import reporter
+        from src.crew_config import create_llm
 
-        # 执行分析
-        update_task_status(task_id, "running", 30, "数据探索中...")
+        update_task_status(task_id, "running", 20, "加载数据探索 Agent...")
+
+        # 创建 LLM
+        llm = create_llm()
+
+        # 重新创建 Agent（使用正确的数据路径）
+        from crewai import Agent
+        from src.crew_config import create_llm
+
+        # 数据探索 Agent
+        data_explorer = Agent(
+            role="数据探索专家",
+            goal=f"读取并分析数据集 {dataset_path}",
+            backstory="""你是一位经验丰富的数据分析师，专门负责数据探索和数据质量评估。
+            你能够准确识别数据的特征、质量问题和潜在价值。""",
+            llm=llm,
+            verbose=True
+        )
+
+        # 统计分析 Agent
+        analyst = Agent(
+            role="统计分析专家",
+            goal=f"对数据集 {dataset_path} 进行深入的统计分析",
+            backstory="""你是一位资深的统计学家，擅长从数据中发现模式和趋势。
+            你总是基于数据和统计事实得出结论，而不是凭空猜测。""",
+            llm=llm,
+            verbose=True
+        )
+
+        # PandaAI Agent
+        pandaai = Agent(
+            role="AI 数据洞察专家",
+            goal=f"使用 PandaAI 对数据集 {dataset_path} 进行高级 AI 分析",
+            backstory="""你是一位经验丰富的 AI 数据科学家，专门使用 PandaAI 进行高级数据分析。
+            你能够从数据中发现别人看不到的模式，并将其转化为实际行动建议。""",
+            llm=llm,
+            verbose=True
+        )
+
+        # 报告生成 Agent
+        reporter = Agent(
+            role="报告生成专家",
+            goal="整合所有 Agent 的分析结果，生成最终的专业报告",
+            backstory="""你是一位资深的数据分析专家，能够提取关键信息和洞察，
+            创建可执行的建议和行动计划。你的报告既有数据支撑，又有战略眼光。""",
+            llm=llm,
+            verbose=True
+        )
+
+        # 创建 Crew
+        from crewai import Crew, Process
+        from crewai.tasks import Task
+
+        # 定义任务（直接使用文件路径）
+        task_data_exploration = Task(
+            description=f"""读取数据集 {dataset_path}，执行以下操作：
+
+1. 使用 read_csv_dataset 工具读取数据
+2. 使用 check_data_quality 检查数据质量
+3. 使用 generate_data_summary 生成数据概览
+
+重要：明确记录数据集路径 {dataset_path} 在输出中。
+""",
+            expected_output="数据集概览报告，包含：数据规模、字段类型、质量评估、样本数据",
+            agent=data_explorer
+        )
+
+        task_statistical_analysis = Task(
+            description=f"""对数据集 {dataset_path} 进行深入的统计分析：
+
+1. 使用 read_csv_dataset 读取数据集 {dataset_path}
+2. 使用 calculate_basic_stats 计算基本统计量（均值、中位数、标准差等）
+3. 使用 analyze_trend 分析时间序列趋势
+4. 使用 calculate_correlation 分析变量相关性
+5. 使用 detect_anomalies 检测异常值
+6. 使用 generate_chart_config 生成图表配置
+7. 生成完整的统计分析报告
+
+重要：直接读取原始数据文件 {dataset_path}，执行真正的数值计算。
+""",
+            expected_output="统计分析报告，包含：关键指标、趋势分析、相关性矩阵、异常值列表、图表配置",
+            agent=analyst
+        )
+
+        task_pandaai_analysis = Task(
+            description=f"""利用 PandaAI 对数据集 {dataset_path} 进行高级 AI 分析：
+
+分析目标：{goal}
+
+请执行以下分析：
+1. 使用 pandaai_chat 进行智能问答，了解数据特征
+2. 使用 pandaai_clean_data 清洗数据
+3. 使用 pandaai_analyze_patterns 识别数据模式和洞察
+4. 使用 pandaai_predict_trend 预测未来趋势
+5. 使用 pandaai_generate_chart 生成可视化图表配置
+
+重要：直接读取数据集 {dataset_path}，使用 pandasai 的真实功能。
+""",
+            expected_output="PandaAI 分析报告，包含：智能问答结果、数据清洗报告、模式识别洞察、趋势预测、可视化建议",
+            agent=pandaai
+        )
+
+        task_report = Task(
+            description="""整合所有 Agent 的分析结果，生成最终的专业报告。
+
+分析目标：{goal}
+数据集：{dataset_path}
+分析深度：{depth}
+
+报告应包含：
+1. **执行摘要** - 基于分析目标 {goal} 的高层总结
+2. **数据概览** - 来自前一个任务的数据概况
+3. **统计发现** - 来自统计分析任务的结果
+4. **PandaAI 洞察** - 来自 PandaAI 分析任务的结果
+5. **综合建议** - 可执行的行动计划
+6. **附录** - 技术细节、图表配置
+
+使用 format_report_markdown 或 format_report_json 工具生成最终报告。
+保存到文件：{output_path}
+""",
+            expected_output="完整的 Markdown 格式分析报告",
+            agent=reporter
+        )
+
+        # 创建 Crew
+        crew = Crew(
+            agents=[data_explorer, analyst, pandaai, reporter],
+            tasks=[task_data_exploration, task_statistical_analysis, task_pandaai_analysis, task_report],
+            process=Process.sequential,
+            verbose=True
+        )
+
+        update_task_status(task_id, "running", 30, "开始分析...")
 
         output_path = OUTPUT_DIR / f"{task_id}_report.{output_format}" if output_format == 'json' else OUTPUT_DIR / f"{task_id}_report.md"
 
-        # 使用 inputs 字典传递参数
-        result = crew.kickoff(inputs={
-            'dataset_path': dataset_path,
-            'goal': goal,
-            'depth': depth,
-            'output_path': str(output_path),
-            'output_format': output_format
-        })
+        # 执行分析（不依赖占位符替换）
+        result = crew.kickoff()
 
         update_task_status(task_id, "running", 90, "生成报告...")
 
