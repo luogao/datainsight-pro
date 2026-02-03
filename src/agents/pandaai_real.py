@@ -293,13 +293,13 @@ def get_pandaai() -> RealPandaAI:
 # ========================================
 
 @tool
-def pandaai_chat(question: str, dataframe_context: Dict) -> str:
+def pandaai_chat(question: str, file_path: str) -> str:
     """
     使用 PandaAI 进行智能数据分析问答
 
     Args:
         question: 自然语言问题
-        dataframe_context: 数据上下文（包含 DataFrame 信息）
+        file_path: 数据文件路径
 
     Returns:
         PandaAI 的回答
@@ -308,8 +308,8 @@ def pandaai_chat(question: str, dataframe_context: Dict) -> str:
         return "⚠️  pandasai 未安装，无法使用此功能。请运行: pip install pandasai"
 
     try:
-        # 从上下文中重建 DataFrame
-        df = pd.DataFrame(dataframe_context.get('data', []))
+        # 直接从文件读取数据，避免将全量数据放入 prompt
+        df = pd.read_csv(file_path)
 
         if df.empty:
             return "❌ 数据为空"
@@ -323,12 +323,12 @@ def pandaai_chat(question: str, dataframe_context: Dict) -> str:
 
 
 @tool
-def pandaai_clean_data(dataframe_context: Dict) -> str:
+def pandaai_clean_data(file_path: str) -> str:
     """
     使用 PandaAI 智能清洗数据
 
     Args:
-        dataframe_context: 数据上下文
+        file_path: 数据文件路径
 
     Returns:
         清洗报告
@@ -337,29 +337,27 @@ def pandaai_clean_data(dataframe_context: Dict) -> str:
         return "⚠️  pandasai 未安装"
 
     try:
-        df = pd.DataFrame(dataframe_context.get('data', []))
+        df = pd.read_csv(file_path)
         pandaai = get_pandaai()
         result = pandaai.clean_data(df)
 
-        return f"""
-✅ 数据清洗完成
+        return f"""✅ 数据清洗完成
 - 原始行数：{result.get('original_rows', 0)}
 - 清洗后行数：{result.get('cleaned_rows', 0)}
 - 删除重复行：{result.get('removed_rows', 0)}
 - 缺失值处理：{result.get('original_nulls', 0)} → {result.get('cleaned_nulls', 0)}
-- 清洗报告：{result.get('report', 'N/A')}
-        """
+- 清洗报告：{result.get('report', 'N/A')[:200]}..."""
     except Exception as e:
         return f"❌ 数据清洗失败: {str(e)}"
 
 
 @tool
-def pandaai_analyze_patterns(dataframe_context: Dict) -> str:
+def pandaai_analyze_patterns(file_path: str) -> str:
     """
     使用 PandaAI 分析数据模式和洞察
 
     Args:
-        dataframe_context: 数据上下文
+        file_path: 数据文件路径
 
     Returns:
         分析洞察
@@ -368,7 +366,7 @@ def pandaai_analyze_patterns(dataframe_context: Dict) -> str:
         return "⚠️  pandasai 未安装"
 
     try:
-        df = pd.DataFrame(dataframe_context.get('data', []))
+        df = pd.read_csv(file_path)
         pandaai = get_pandaai()
         insights = pandaai.analyze_patterns(df)
 
@@ -378,12 +376,12 @@ def pandaai_analyze_patterns(dataframe_context: Dict) -> str:
 
 
 @tool
-def pandaai_predict_trend(dataframe_context: Dict, periods: int = 3) -> str:
+def pandaai_predict_trend(file_path: str, periods: int = 3) -> str:
     """
     使用 PandaAI 预测未来趋势
 
     Args:
-        dataframe_context: 数据上下文
+        file_path: 数据文件路径
         periods: 预测周期数
 
     Returns:
@@ -393,17 +391,15 @@ def pandaai_predict_trend(dataframe_context: Dict, periods: int = 3) -> str:
         return "⚠️  pandasai 未安装"
 
     try:
-        df = pd.DataFrame(dataframe_context.get('data', []))
+        df = pd.read_csv(file_path)
         pandaai = get_pandaai()
         prediction = pandaai.predict_future(df, periods)
 
         if prediction.get('success'):
-            return f"""
-📈 PandaAI 趋势预测
+            return f"""📈 PandaAI 趋势预测
 预测周期：{periods}
 预测结果：
-{prediction.get('prediction', 'N/A')}
-            """
+{prediction.get('prediction', 'N/A')[:500]}..."""
         else:
             return f"❌ 预测失败：{prediction.get('error', 'Unknown error')}"
     except Exception as e:
@@ -411,12 +407,12 @@ def pandaai_predict_trend(dataframe_context: Dict, periods: int = 3) -> str:
 
 
 @tool
-def pandaai_generate_chart(dataframe_context: Dict, chart_type: str = "line") -> str:
+def pandaai_generate_chart(file_path: str, chart_type: str = "line") -> str:
     """
     使用 PandaAI 生成数据可视化图表
 
     Args:
-        dataframe_context: 数据上下文
+        file_path: 数据文件路径
         chart_type: 图表类型 (line, bar, scatter, pie)
 
     Returns:
@@ -426,16 +422,14 @@ def pandaai_generate_chart(dataframe_context: Dict, chart_type: str = "line") ->
         return "⚠️  pandasai 未安装"
 
     try:
-        df = pd.DataFrame(dataframe_context.get('data', []))
+        df = pd.read_csv(file_path)
         pandaai = get_pandaai()
         chart = pandaai.generate_chart(df, chart_type)
 
         if chart.get('success'):
-            return f"""
-📊 图表生成成功
+            return f"""📊 图表生成成功
 类型：{chart_type}
-结果：{chart.get('result', 'N/A')}
-            """
+结果：{chart.get('result', 'N/A')[:500]}..."""
         else:
             return f"❌ 图表生成失败：{chart.get('error', 'Unknown error')}"
     except Exception as e:
@@ -443,12 +437,12 @@ def pandaai_generate_chart(dataframe_context: Dict, chart_type: str = "line") ->
 
 
 @tool
-def pandaai_data_summary(dataframe_context: Dict) -> str:
+def pandaai_data_summary(file_path: str) -> str:
     """
     使用 PandaAI 生成数据摘要
 
     Args:
-        dataframe_context: 数据上下文
+        file_path: 数据文件路径
 
     Returns:
         数据摘要
@@ -457,16 +451,15 @@ def pandaai_data_summary(dataframe_context: Dict) -> str:
         return "⚠️  pandasai 未安装"
 
     try:
-        df = pd.DataFrame(dataframe_context.get('data', []))
+        df = pd.read_csv(file_path)
         pandaai = get_pandaai()
         summary = pandaai.get_data_summary(df)
 
-        return f"""
-📊 PandaAI 数据摘要
+        return f"""📊 PandaAI 数据摘要
 数据规模：{summary.get('shape', 'Unknown')}
 字段列表：{', '.join(summary.get('columns', []))}
 摘要信息：
-{summary.get('summary', 'N/A')}
+{summary.get('summary', 'N/A')[:500]}..."""
         """
     except Exception as e:
         return f"❌ 摘要生成失败: {str(e)}"

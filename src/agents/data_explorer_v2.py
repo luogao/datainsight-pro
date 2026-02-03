@@ -19,22 +19,25 @@ def read_csv_dataset(file_path: str) -> dict:
         file_path: CSV 文件路径
 
     Returns:
-        包含数据信息的字典
+        包含数据信息的字典（不包含全量数据，避免 Prompt 超长）
     """
     try:
         df = pd.read_csv(file_path)
 
+        # 只返回统计信息和预览，不返回全量数据
         return {
             "success": True,
+            "file_path": file_path,
             "shape": df.shape,
             "columns": list(df.columns),
             "dtypes": df.dtypes.to_dict(),
-            "memory_usage": df.memory_usage(deep=True).sum() / 1024 / 1024,  # MB
-            "preview": df.head().to_dict(orient='records'),
+            "memory_usage_mb": df.memory_usage(deep=True).sum() / 1024 / 1024,
+            "preview": df.head(10).to_dict(orient='records'),  # 只返回前 10 行
             "missing_values": df.isnull().sum().to_dict(),
-            "sample_size": min(5, len(df)),
-            # 添加原始数据供 PandaAI 使用
-            "data": df.to_dict(orient='records')
+            "missing_percentage": (df.isnull().sum() / len(df) * 100).to_dict(),
+            "sample_size": min(10, len(df)),
+            # 只返回数值列的统计信息，不返回原始数据
+            "numeric_stats": df.describe().to_dict() if len(df.select_dtypes(include=[np.number]).columns) > 0 else {}
         }
     except Exception as e:
         return {
