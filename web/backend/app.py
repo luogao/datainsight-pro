@@ -104,13 +104,20 @@ async def run_analysis_task(task_id: str, goal: str, dataset_path: str, depth: s
         task_data_exploration = Task(
             description=f"""读取数据集 {dataset_path}，执行以下操作：
 
-1. 使用 read_csv_dataset 工具读取数据
-2. 使用 check_data_quality 检查数据质量
-3. 使用 generate_data_summary 生成数据概览
+分析目标：{goal}
 
-重要：明确记录数据集路径 {dataset_path} 在输出中。
+请按顺序执行以下操作（所有工具都需要 file_path 参数）：
+1. read_csv_dataset(file_path="{dataset_path}") - 读取数据基本信息
+2. check_data_quality(file_path="{dataset_path}") - 检查数据质量
+3. generate_data_summary(file_path="{dataset_path}") - 生成数据概览报告
+
+重要说明：
+- 所有工具都使用 file_path="{dataset_path}" 参数
+- 工具会自动读取数据文件
+- 最后整合所有结果，生成完整的数据探索报告
+- 报告中应包含：数据规模、字段类型、质量评估、样本数据预览
 """,
-            expected_output="数据集概览报告，包含：数据规模、字段类型、质量评估、样本数据",
+            expected_output="完整的数据探索报告，包含：数据规模、字段类型、质量评估、样本数据",
             agent=data_explorer
         )
 

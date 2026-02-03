@@ -47,80 +47,111 @@ def read_csv_dataset(file_path: str) -> dict:
 
 
 @tool
-def check_data_quality(df_dict: dict) -> dict:
+def check_data_quality(file_path: str) -> dict:
     """
     检查数据质量
 
     Args:
-        df_dict: 包含数据的字典（从 read_csv_dataset 返回）
+        file_path: CSV 文件路径
 
     Returns:
         数据质量报告
     """
-    if not df_dict.get("success"):
+    try:
+        df = pd.read_csv(file_path)
+
+        # 计算重复行
+        duplicate_count = df.duplicated().sum()
+
+        # 计算缺失值
+        missing_values = df.isnull().sum().to_dict()
+        missing_percentage = (df.isnull().sum() / len(df) * 100).to_dict()
+
+        # 计算质量评分
+        total_cells = df.shape[0] * df.shape[1]
+        missing_cells = df.isnull().sum().sum()
+        quality_score = "A" if missing_cells / total_cells < 0.01 else "B" if missing_cells / total_cells < 0.05 else "C"
+
+        return {
+            "success": True,
+            "file_path": file_path,
+            "total_records": len(df),
+            "total_columns": len(df.columns),
+            "missing_values": missing_values,
+            "missing_percentage": missing_percentage,
+            "duplicate_count": int(duplicate_count),
+            "data_types": df.dtypes.to_dict(),
+            "quality_score": quality_score,
+            "total_cells": total_cells,
+            "missing_cells": int(missing_cells),
+            "completeness": f"{(1 - missing_cells / total_cells) * 100:.2f}%"
+        }
+    except Exception as e:
         return {
             "success": False,
-            "error": "Invalid data"
+            "error": str(e)
         }
-
-    return {
-        "total_records": df_dict.get("shape", [0, 0])[0],
-        "total_columns": df_dict.get("shape", [0, 0])[1],
-        "missing_values": df_dict.get("missing_values", {}),
-        "duplicate_count": 0,  # 简化
-        "data_types": df_dict.get("dtypes", {}),
-        "quality_score": "A"  # 简化
-    }
 
 
 @tool
-def generate_data_summary(df_dict: dict) -> str:
+def generate_data_summary(file_path: str) -> str:
     """
     生成数据集概览报告
 
     Args:
-        df_dict: 数据字典
+        file_path: CSV 文件路径
 
     Returns:
         Markdown 格式的数据概览
     """
-    if not df_dict.get("success"):
-        return "❌ 数据读取失败，无法生成概览"
+    try:
+        df = pd.read_csv(file_path)
 
-    rows, cols = df_dict.get("shape", [0, 0])
-    columns = df_dict.get("columns", [])
-    dtypes = df_dict.get("dtypes", {})
-    missing = df_dict.get("missing_values", {})
+        rows, cols = df.shape
+        columns = list(df.columns)
+        dtypes = df.dtypes.to_dict()
+        missing = df.isnull().sum().to_dict()
 
-    summary = f"""# 📊 数据集概览
+        summary = f"""# 📊 数据集概览
 
 ## 基本信息
+- **文件路径**: {file_path}
 - **数据规模**: {rows:,} 行 × {cols} 列
-- **内存占用**: {df_dict.get('memory_usage', 0):.2f} MB
+- **内存占用**: {df.memory_usage(deep=True).sum() / 1024 / 1024:.2f} MB
 
 ## 字段列表
 """
 
-    for col in columns:
-        dtype = dtypes.get(col, "unknown")
-        miss = missing.get(col, 0)
-        summary += f"- **{col}**: {dtype}"
+        for col in columns:
+            dtype = str(dtypes.get(col, "unknown"))
+            miss = missing.get(col, 0)
+            summary += f"- **{col}**: {dtype}"
 
-        if miss > 0:
-            summary += f" (缺失: {miss:,})"
-        summary += "\n"
-
-    # 添加预览
-    preview = df_dict.get("preview", [])
-    if preview:
-        summary += f"\n## 📋 数据预览（前 {len(preview)} 行）\n\n"
-        for i, row in enumerate(preview):
-            summary += f"**行 {i+1}:**\n"
-            for key, value in row.items():
-                summary += f"  - {key}: {value}\n"
+            if miss > 0:
+                summary += f" (缺失: {miss:,} ({miss/rows*100:.1f}%))"
             summary += "\n"
 
-    return summary
+        # 添加预览
+        preview_rows = min(5, len(df))
+        summary += f"\n## 📋 数据预览（前 {preview_rows} 行）\n\n"
+
+        for i in range(preview_rows):
+            row = df.iloc[i]
+            summary += f"**行 {i+1}:**\n"
+            for col in columns[:5]:  # 只显示前 5 列
+                val = row[col]
+                # 处理 NaN 和长字符串
+                if pd.isna(val):
+                    val = "NaN"
+                elif isinstance(val, str) and len(val) > 50:
+                    val = val[:47] + "..."
+                summary += f"  - {col}: {val}\n"
+            summary += "\n"
+
+        return summary
+
+    except Exception as e:
+        return f"❌ 数据读取失败，无法生成概览: {str(e)}"
 
 
 # Data Explorer Agent（支持自定义 LLM）
