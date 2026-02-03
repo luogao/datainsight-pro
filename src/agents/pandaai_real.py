@@ -17,38 +17,49 @@ load_dotenv()
 # ========================================
 
 try:
-    from pandasai import PandasAI
-    from pandasai.llm import OpenAI
+    # pandasai 2.x 使用 SmartDataframe
+    from pandasai import SmartDataframe
+    # 尝试导入 LLM 配置（新版可能位置不同）
+    try:
+        from pandasai.llm import OpenAI
+    except ImportError:
+        # 新版本可能在不同的位置
+        from langchain_community.llms import OpenAI as LangchainOpenAI
+        OpenAI = LangchainOpenAI
     PANDAAI_AVAILABLE = True
 except ImportError:
     PANDAAI_AVAILABLE = False
-    print("⚠️  pandasai 未安装，将使用模拟模式。请运行: pip install pandasai")
+    print("⚠️  pandasai 未安装或版本不兼容。请运行: pip install pandasai")
 
 
 class RealPandaAI:
-    """真正的 PandaAI 集成"""
+    """真正的 PandaAI 集成 (支持 pandasai 2.x)"""
 
     def __init__(self):
         if not PANDAAI_AVAILABLE:
             raise ImportError("pandasai 未安装，请运行: pip install pandasai")
 
-        # 初始化 LLM（支持自定义 base_url 和模型）
-        api_key = os.getenv("OPENAI_API_KEY")
-        base_url = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
-        model = os.getenv("OPENAI_MODEL", "gpt-4")
+        # 初始化 LLM 配置
+        self.api_key = os.getenv("OPENAI_API_KEY")
+        self.base_url = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+        self.model = os.getenv("OPENAI_MODEL", "gpt-4")
 
-        if not api_key:
+        if not self.api_key:
             raise ValueError("需要设置 OPENAI_API_KEY 环境变量")
 
-        # 创建 LLM 实例
-        self.llm = OpenAI(
-            api_token=api_key,
-            model=model,
-            **({"endpoint": base_url} if base_url else {})
-        )
+        # 配置 LLM (pandasai 2.x 使用配置字典)
+        self.llm_config = {
+            "api_key": self.api_key,
+            "model": self.model,
+        }
 
-        # 创建 PandaAI 实例
-        self.pandasai = PandasAI(self.llm, verbose=True)
+        # 如果有自定义 base_url，添加到配置中
+        if self.base_url and self.base_url != "https://api.openai.com/v1":
+            # pandasai 2.x 可能需要通过不同的方式配置
+            # 这里我们使用环境变量或者直接传递参数
+            import os
+            os.environ["OPENAI_API_BASE"] = self.base_url
+            os.environ["OPENAI_API_KEY"] = self.api_key
 
     def chat(self, df: pd.DataFrame, question: str) -> str:
         """
@@ -62,7 +73,9 @@ class RealPandaAI:
             PandaAI 的回答
         """
         try:
-            result = self.pandasai.run(df, prompt=question)
+            # 使用 SmartDataframe (pandasai 2.x)
+            sdf = SmartDataframe(df, config={"llm": self.llm_config})
+            result = sdf.chat(question)
             return str(result)
         except Exception as e:
             return f"❌ PandaAI 查询失败: {str(e)}"
