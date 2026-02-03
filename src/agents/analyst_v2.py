@@ -46,7 +46,7 @@ def calculate_basic_stats(file_path: str, column: str) -> dict:
 
 
 @tool
-def analyze_trend(data_dict: dict, column: str, date_column: str = None) -> dict:
+def analyze_trend(file_path: str, column: str, date_column: str = None) -> dict:
     """
     分析时间序列趋势
 
@@ -97,7 +97,7 @@ def analyze_trend(data_dict: dict, column: str, date_column: str = None) -> dict
 
 
 @tool
-def calculate_correlation(data_dict: dict, columns: list) -> dict:
+def calculate_correlation(file_path: str, columns: list) -> dict:
     """
     计算列之间的相关性
 
@@ -144,7 +144,7 @@ def calculate_correlation(data_dict: dict, columns: list) -> dict:
 
 
 @tool
-def detect_anomalies(data_dict: dict, column: str, threshold: float = 2.0) -> list:
+def detect_anomalies(file_path: str, column: str, threshold: float = 2.0) -> list:
     """
     检测异常值（使用标准差法）
 
