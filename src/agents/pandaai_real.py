@@ -470,7 +470,7 @@ def pandaai_data_summary(file_path: str) -> str:
 # ========================================
 
 def create_pandaai_agent():
-    """创建 PandaAI Agent（支持自定义 LLM 配置）"""
+    """创建 PandaAI Agent (支持自定义 LLM 配置)"""
     # 获取 LLM 配置
     from langchain_openai import ChatOpenAI
 
