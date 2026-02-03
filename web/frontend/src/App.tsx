@@ -9,7 +9,7 @@ import { TaskStatus } from './types'
 function App() {
   const [uploadedFile, setUploadedFile] = useState<{
     filename: string
-    path: string
+    file_path: string
     size: number
     file_info?: any
   } | null>(null)

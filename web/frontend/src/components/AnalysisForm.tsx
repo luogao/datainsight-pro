@@ -6,7 +6,7 @@ import { TaskStatus } from '../types'
 interface AnalysisFormProps {
   uploadedFile: {
     filename: string
-    path: string
+    file_path: string
     size: number
     file_info?: any
   }
@@ -31,7 +31,7 @@ export default function AnalysisForm({ uploadedFile, onAnalysisStarted }: Analys
       setStarting(true)
       const task = await apiService.startAnalysis(
         goal,
-        uploadedFile.path,
+        uploadedFile.file_path,
         depth,
         outputFormat
       )
