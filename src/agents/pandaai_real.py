@@ -57,7 +57,6 @@ class RealPandaAI:
         if self.base_url and self.base_url != "https://api.openai.com/v1":
             # pandasai 2.x 可能需要通过不同的方式配置
             # 这里我们使用环境变量或者直接传递参数
-            import os
             os.environ["OPENAI_API_BASE"] = self.base_url
             os.environ["OPENAI_API_KEY"] = self.api_key
 
@@ -102,7 +101,9 @@ class RealPandaAI:
         prompt = chart_prompts.get(chart_type, f"生成一个{chart_type}图表")
 
         try:
-            result = self.pandasai.run(df, prompt=prompt)
+            # 使用 SmartDataframe 生成图表
+            sdf = SmartDataframe(df, config={"llm": self.llm_config})
+            result = sdf.chat(prompt)
             return {
                 "type": chart_type,
                 "prompt": prompt,
@@ -133,7 +134,8 @@ class RealPandaAI:
 
             # 使用 PandaAI 清洗数据
             prompt = "请清洗这个数据集：处理缺失值、去除重复值、纠正异常值"
-            result = self.pandasai.run(df, prompt)
+            sdf = SmartDataframe(df, config={"llm": self.llm_config})
+            result = sdf.chat(prompt)
 
             # 如果返回的是 DataFrame
             if isinstance(result, pd.DataFrame):
@@ -173,25 +175,28 @@ class RealPandaAI:
         insights = []
 
         try:
+            # 创建 SmartDataframe
+            sdf = SmartDataframe(df, config={"llm": self.llm_config})
+
             # 1. 数据概览洞察
             prompt = "分析这个数据集的整体特征，包括：数据分布、异常值、相关性"
-            overview = self.pandasai.run(df, prompt)
+            overview = sdf.chat(prompt)
             insights.append(f"📊 数据概览：{overview}")
 
             # 2. 趋势分析
             prompt = "识别数据中的趋势模式和周期性"
-            trends = self.pandasai.run(df, prompt)
+            trends = sdf.chat(prompt)
             insights.append(f"📈 趋势分析：{trends}")
 
             # 3. 异常检测
             prompt = "检测数据中的异常值和离群点，并解释可能的原因"
-            anomalies = self.pandasai.run(df, prompt)
+            anomalies = sdf.chat(prompt)
             insights.append(f"🔍 异常检测：{anomalies}")
 
             # 4. 相关性分析
             if df.shape[1] > 1:
                 prompt = "分析变量之间的相关性，找出强相关关系"
-                correlations = self.pandasai.run(df, prompt)
+                correlations = sdf.chat(prompt)
                 insights.append(f"🔗 相关性分析：{correlations}")
 
         except Exception as e:
@@ -212,7 +217,8 @@ class RealPandaAI:
         """
         try:
             prompt = f"基于这个数据集的历史数据，预测未来 {periods} 个周期的趋势，包括预测值和置信区间"
-            result = self.pandasai.run(df, prompt)
+            sdf = SmartDataframe(df, config={"llm": self.llm_config})
+            result = sdf.chat(prompt)
 
             return {
                 "periods": periods,
@@ -238,7 +244,8 @@ class RealPandaAI:
         """
         try:
             prompt = "请生成这个数据集的详细摘要，包括：统计特征、数据类型、质量评估"
-            result = self.pandasai.run(df, prompt)
+            sdf = SmartDataframe(df, config={"llm": self.llm_config})
+            result = sdf.chat(prompt)
 
             return {
                 "shape": df.shape,

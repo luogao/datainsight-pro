@@ -146,7 +146,7 @@ async def run_analysis_task(task_id: str, goal: str, dataset_path: str, depth: s
 重要：直接读取数据集 {dataset_path}，使用 pandasai 的真实功能。
 """,
             expected_output="PandaAI 分析报告，包含：智能问答结果、数据清洗报告、模式识别洞察、趋势预测、可视化建议",
-            agent=pandaai
+            agent=pandaai_agent
         )
 
         task_report = Task(
@@ -173,7 +173,7 @@ async def run_analysis_task(task_id: str, goal: str, dataset_path: str, depth: s
 
         # 创建 Crew
         crew = Crew(
-            agents=[data_explorer, analyst, pandaai, reporter],
+            agents=[data_explorer, analyst, pandaai_agent, reporter],
             tasks=[task_data_exploration, task_statistical_analysis, task_pandaai_analysis, task_report],
             process=Process.sequential,
             verbose=True
