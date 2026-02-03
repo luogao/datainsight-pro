@@ -89,66 +89,16 @@ async def run_analysis_task(task_id: str, goal: str, dataset_path: str, depth: s
     try:
         update_task_status(task_id, "running", 10, "初始化分析...")
 
-        # 直接使用 src/agents 中的工具和 Agent，不使用 create_crew
-        # 这样可以完全控制数据流
+        # 导入已配置好的 Agents（它们已经有正确的 tools）
         from src.agents.data_explorer_v2 import data_explorer
         from src.agents.analyst_v2 import analyst
         from src.agents.pandaai_real import pandaai_agent
         from src.agents.reporter_v2 import reporter
-        from src.crew_config import create_llm
 
         update_task_status(task_id, "running", 20, "加载数据探索 Agent...")
 
-        # 创建 LLM
-        llm = create_llm()
-
-        # 重新创建 Agent（使用正确的数据路径）
-        from crewai import Agent
-        from src.crew_config import create_llm
-
-        # 数据探索 Agent
-        data_explorer = Agent(
-            role="数据探索专家",
-            goal=f"读取并分析数据集 {dataset_path}",
-            backstory="""你是一位经验丰富的数据分析师，专门负责数据探索和数据质量评估。
-            你能够准确识别数据的特征、质量问题和潜在价值。""",
-            llm=llm,
-            verbose=True
-        )
-
-        # 统计分析 Agent
-        analyst = Agent(
-            role="统计分析专家",
-            goal=f"对数据集 {dataset_path} 进行深入的统计分析",
-            backstory="""你是一位资深的统计学家，擅长从数据中发现模式和趋势。
-            你总是基于数据和统计事实得出结论，而不是凭空猜测。""",
-            llm=llm,
-            verbose=True
-        )
-
-        # PandaAI Agent
-        pandaai = Agent(
-            role="AI 数据洞察专家",
-            goal=f"使用 PandaAI 对数据集 {dataset_path} 进行高级 AI 分析",
-            backstory="""你是一位经验丰富的 AI 数据科学家，专门使用 PandaAI 进行高级数据分析。
-            你能够从数据中发现别人看不到的模式，并将其转化为实际行动建议。""",
-            llm=llm,
-            verbose=True
-        )
-
-        # 报告生成 Agent
-        reporter = Agent(
-            role="报告生成专家",
-            goal="整合所有 Agent 的分析结果，生成最终的专业报告",
-            backstory="""你是一位资深的数据分析专家，能够提取关键信息和洞察，
-            创建可执行的建议和行动计划。你的报告既有数据支撑，又有战略眼光。""",
-            llm=llm,
-            verbose=True
-        )
-
         # 创建 Crew
-        from crewai import Crew, Process
-        from crewai.tasks import Task
+        from crewai import Crew, Process, Task
 
         # 定义任务（直接使用文件路径）
         task_data_exploration = Task(
