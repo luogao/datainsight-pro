@@ -151,8 +151,12 @@ async def run_analysis_task(task_id: str, goal: str, dataset_path: str, depth: s
             agent=pandaai_agent
         )
 
-        # 定义输出路径（需要在创建任务前）
-        output_path = OUTPUT_DIR / f"{task_id}_report.{output_format}" if output_format == 'json' else OUTPUT_DIR / f"{task_id}_report.md"
+        # 为每个任务创建独立的输出目录
+        task_output_dir = OUTPUT_DIR / task_id
+        task_output_dir.mkdir(exist_ok=True)
+
+        # 定义输出路径
+        output_path = task_output_dir / f"final_report.{output_format}" if output_format == 'json' else task_output_dir / "final_report.md"
 
         task_report = Task(
             description=f"""整合所有 Agent 的分析结果，生成最终的专业报告。
@@ -189,6 +193,47 @@ async def run_analysis_task(task_id: str, goal: str, dataset_path: str, depth: s
         # 执行分析（不依赖占位符替换）
         result = crew.kickoff()
 
+        update_task_status(task_id, "running", 70, "保存中间结果...")
+
+        # 保存每个任务的输出到独立文件
+        # CrewAI 的 result 是一个 CrewOutput 对象，包含 tasks_output 属性
+        try:
+            # 访问每个任务的输出
+            if hasattr(result, 'tasks_output'):
+                task_outputs = result.tasks_output
+
+                # 保存数据探索结果
+                if len(task_outputs) > 0:
+                    data_exploration_output = str(task_outputs[0].raw if hasattr(task_outputs[0], 'raw') else task_outputs[0])
+                    with open(task_output_dir / "data_exploration.md", 'w', encoding='utf-8') as f:
+                        f.write("# 数据探索分析结果\n\n")
+                        f.write(data_exploration_output)
+
+                # 保存统计分析结果
+                if len(task_outputs) > 1:
+                    statistical_analysis_output = str(task_outputs[1].raw if hasattr(task_outputs[1], 'raw') else task_outputs[1])
+                    with open(task_output_dir / "statistical_analysis.md", 'w', encoding='utf-8') as f:
+                        f.write("# 统计分析结果\n\n")
+                        f.write(statistical_analysis_output)
+
+                # 保存 PandaAI 分析结果
+                if len(task_outputs) > 2:
+                    pandaai_analysis_output = str(task_outputs[2].raw if hasattr(task_outputs[2], 'raw') else task_outputs[2])
+                    with open(task_output_dir / "pandaai_analysis.md", 'w', encoding='utf-8') as f:
+                        f.write("# PandaAI 分析结果\n\n")
+                        f.write(pandaai_analysis_output)
+
+                # 保存最终报告
+                if len(task_outputs) > 3:
+                    final_report_output = str(task_outputs[3].raw if hasattr(task_outputs[3], 'raw') else task_outputs[3])
+                    with open(task_output_dir / "final_report.md", 'w', encoding='utf-8') as f:
+                        f.write(final_report_output)
+        except Exception as e:
+            print(f"保存中间结果时出错: {e}")
+            # 如果无法提取单独的任务输出，保存完整结果
+            with open(task_output_dir / "final_report.md", 'w', encoding='utf-8') as f:
+                f.write(str(result))
+
         update_task_status(task_id, "running", 90, "生成报告...")
 
         # 读取报告内容
@@ -200,7 +245,27 @@ async def run_analysis_task(task_id: str, goal: str, dataset_path: str, depth: s
                 with open(output_path, 'r', encoding='utf-8') as f:
                     report_content = f.read()
         else:
-            report_content = result
+            # 如果 reporter agent 没有保存文件，从结果中读取
+            report_path = task_output_dir / "final_report.md"
+            if report_path.exists():
+                with open(report_path, 'r', encoding='utf-8') as f:
+                    report_content = f.read()
+            else:
+                report_content = str(result)
+
+        # 保存完整的 CrewAI 执行日志（包含所有 Agent 的输出）
+        crew_log_path = task_output_dir / "execution_log.txt"
+        try:
+            with open(crew_log_path, 'w', encoding='utf-8') as f:
+                f.write(f"分析任务 ID: {task_id}\n")
+                f.write(f"数据集: {dataset_path}\n")
+                f.write(f"分析目标: {goal}\n")
+                f.write(f"分析深度: {depth}\n")
+                f.write(f"输出格式: {output_format}\n")
+                f.write(f"\n=== CrewAI 执行结果 ===\n\n")
+                f.write(str(result))  # 保存完整的执行结果
+        except Exception as e:
+            print(f"保存执行日志失败: {e}")
 
         update_task_status(task_id, "completed", 100, "分析完成！", {
             'report_path': str(output_path),
@@ -391,6 +456,54 @@ async def download_report(task_id: str):
             )
 
     raise HTTPException(status_code=404, detail="报告文件不存在")
+
+
+@app.get("/tasks/{task_id}/files")
+async def list_task_files(task_id: str):
+    """列出任务的所有输出文件"""
+    task_output_dir = OUTPUT_DIR / task_id
+
+    if not task_output_dir.exists():
+        raise HTTPException(status_code=404, detail="任务输出目录不存在")
+
+    files = []
+    for file_path in task_output_dir.iterdir():
+        if file_path.is_file():
+            files.append({
+                'name': file_path.name,
+                'path': str(file_path),
+                'size': file_path.stat().st_size,
+                'url': f"/tasks/{task_id}/files/{file_path.name}"
+            })
+
+    return {
+        'task_id': task_id,
+        'output_dir': str(task_output_dir),
+        'files': files
+    }
+
+
+@app.get("/tasks/{task_id}/files/{filename}")
+async def download_task_file(task_id: str, filename: str):
+    """下载任务的特定输出文件"""
+    task_output_dir = OUTPUT_DIR / task_id
+    file_path = task_output_dir / filename
+
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="文件不存在")
+
+    # 根据文件扩展名设置 media type
+    media_type = 'text/markdown'
+    if filename.endswith('.txt'):
+        media_type = 'text/plain'
+    elif filename.endswith('.json'):
+        media_type = 'application/json'
+
+    return FileResponse(
+        path=str(file_path),
+        filename=filename,
+        media_type=media_type
+    )
 
 
 @app.get("/sample-data")
