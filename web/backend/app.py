@@ -136,14 +136,16 @@ async def run_analysis_task(task_id: str, goal: str, dataset_path: str, depth: s
 
 分析目标：{goal}
 
-请执行以下分析：
-1. 使用 pandaai_chat 进行智能问答，了解数据特征
-2. 使用 pandaai_clean_data 清洗数据
-3. 使用 pandaai_analyze_patterns 识别数据模式和洞察
-4. 使用 pandaai_predict_trend 预测未来趋势
-5. 使用 pandaai_generate_chart 生成可视化图表配置
+请执行以下分析（重要：直接传递文件路径给工具）：
+1. pandaai_chat(question="请帮我分析这个数据集的基本特征", file_path="{dataset_path}")
+2. pandaai_clean_data(file_path="{dataset_path}")
+3. pandaai_analyze_patterns(file_path="{dataset_path}")
+4. pandaai_predict_trend(file_path="{dataset_path}")
+5. pandaai_generate_chart(file_path="{dataset_path}", chart_type="line")
+6. pandaai_data_summary(file_path="{dataset_path}")
 
-重要：直接读取数据集 {dataset_path}，使用 pandasai 的真实功能。
+重要说明：所有 PandaAI 工具都需要 file_path 参数，直接传递文件路径即可。
+工具会自动读取数据并进行分析。
 """,
             expected_output="PandaAI 分析报告，包含：智能问答结果、数据清洗报告、模式识别洞察、趋势预测、可视化建议",
             agent=pandaai_agent
