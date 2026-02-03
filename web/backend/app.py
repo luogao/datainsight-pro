@@ -149,8 +149,11 @@ async def run_analysis_task(task_id: str, goal: str, dataset_path: str, depth: s
             agent=pandaai_agent
         )
 
+        # 定义输出路径（需要在创建任务前）
+        output_path = OUTPUT_DIR / f"{task_id}_report.{output_format}" if output_format == 'json' else OUTPUT_DIR / f"{task_id}_report.md"
+
         task_report = Task(
-            description="""整合所有 Agent 的分析结果，生成最终的专业报告。
+            description=f"""整合所有 Agent 的分析结果，生成最终的专业报告。
 
 分析目标：{goal}
 数据集：{dataset_path}
@@ -180,8 +183,6 @@ async def run_analysis_task(task_id: str, goal: str, dataset_path: str, depth: s
         )
 
         update_task_status(task_id, "running", 30, "开始分析...")
-
-        output_path = OUTPUT_DIR / f"{task_id}_report.{output_format}" if output_format == 'json' else OUTPUT_DIR / f"{task_id}_report.md"
 
         # 执行分析（不依赖占位符替换）
         result = crew.kickoff()
