@@ -55,9 +55,17 @@ class RealPandaAI:
         # 尝试创建 PandaAI LLM 实例
         try:
             from pandasai.llm import OpenAI
-            self.llm = OpenAI(api_key=self.api_key, model=self.model)
-        except Exception:
+            # PandaAI 的 OpenAI 类参数
+            llm_kwargs = {"api_key": self.api_key}
+            # 只有标准 OpenAI 才传递 api_key，自定义端点使用环境变量
+            if self.base_url and self.base_url != "https://api.openai.com/v1":
+                # 使用环境变量配置自定义端点
+                self.llm = None
+            else:
+                self.llm = OpenAI(**llm_kwargs)
+        except Exception as e:
             # 如果创建失败，使用环境变量方式
+            print(f"⚠️  PandaAI LLM 创建失败: {e}，将使用环境变量")
             self.llm = None
 
     def chat(self, df: pd.DataFrame, question: str) -> str:
@@ -74,9 +82,11 @@ class RealPandaAI:
         try:
             # 使用 SmartDataframe (pandasai 2.x)
             if self.llm:
-                sdf = SmartDataframe(df, config={"llm": self.llm})
+                from pandasai.schemas.df_config import Config
+                config = Config(llm=self.llm)
+                sdf = SmartDataframe(df, config=config)
             else:
-                # 使用环境变量
+                # 使用环境变量配置
                 sdf = SmartDataframe(df)
             result = sdf.chat(question)
             return str(result)
