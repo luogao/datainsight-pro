@@ -7,11 +7,31 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      '/api': {
+      // 代理所有 API 请求到后端
+      '/upload': {
         target: 'http://localhost:8000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
-      }
+      },
+      '/analyze': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/tasks': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/reports': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/health': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/sample-data': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
     }
   }
 })
